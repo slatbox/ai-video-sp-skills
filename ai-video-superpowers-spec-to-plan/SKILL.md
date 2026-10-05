@@ -1,7 +1,7 @@
 ---
 name: ai-video-superpowers-spec-to-plan
-version: 2.1.0
-description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.1）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成固定 15s 的 SEG 视频片段；为每段设计 P01–P12 动作分镜（专业镜头语言）；按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；最后产出 plan.md + plan.html（分镜板审核视图）交用户审核。Use when converting a video spec into an executable generation plan with storyboard previs.
+version: 2.2.0
+description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.2）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成固定 15s 的 SEG 视频片段；为每段设计 P01–P12 动作分镜（专业镜头语言）；按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图（连贯片段靠承接句+链式分镜板保证，不再用尾帧首帧图）；最后产出 plan.md + plan.html（分镜板审核视图，成片拼接走 ffmpeg-skill 的 join.py）交用户审核。Use when converting a video spec into an executable generation plan with storyboard previs.
 ---
 
 # AI Video Superpowers · spec-to-plan
@@ -62,7 +62,7 @@ python3 .../image.py download --url <result_url> --output storyboards/SEG-01.png
 - `@[C]` 人物外观映射句（本段每个出场角色一句）
 - 区块：视觉风格/动作语言/视觉特效/摄影风格/音频/环境/情感基调/节奏与递进（取自 spec 第 2 节两栏与氛围设计）
 - 分镜节点 P01–P12 逐条写全（机位、景别、人物位置、核心动作、画面细节），与分镜板逐格一致；台词写进对应格
-- 连贯片段在"环境"区块加承接句（执行阶段会追加上一段尾帧生成的首帧图）
+- 连贯片段在"环境"区块加承接句（说明与上一段同一场景/同一人物/同一光照、紧接上一画面；**连贯性只靠 prompt 承接句 + 链式分镜板保证，不再生成尾帧首帧图**）
 
 prompt 内保留 `@[storyboard]`、`@[C1]` 等占位标记；实际文件映射写进该段"参考图"字段：`@[storyboard]=storyboards/SEG-01.png, @[C1 陈岩]=refs/char-chenyan.png, refs/scene-1.png`（@ 标记项仅定义外观；场景图直接写路径）。
 

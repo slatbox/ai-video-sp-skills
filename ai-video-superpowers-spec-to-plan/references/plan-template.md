@@ -26,7 +26,7 @@
 ### [ ] SEG-02
 - 时长: 15s
 - 来源场景片段: SC-yy
-- 衔接: 连贯（承接 SEG-01）← 执行时将提取 SEG-01 尾帧生成新机位首帧图，追加为本段首张参考图
+- 衔接: 连贯（承接 SEG-01）← 连贯关系靠 prompt 环境区块的承接句 + 分镜板链式一致保证，**不再生成尾帧首帧图**
 - 分镜板: storyboards/SEG-02.png（P01–P12 黏土预演）
 - 分镜概览: ...
 - prompt: |
@@ -40,4 +40,6 @@
 
 ## 成片
 
-- [ ] 拼接：python3 /var/minis/skills/ai-video-superpowers-plan-to-video/scripts/concat.py --project <项目根> → output/final.mp4
+- [ ] 拼接（用 ffmpeg-skill 的 join.py，按其 SKILL.md 调用）：
+  `python3 /var/minis/skills/ffmpeg-skill/scripts/join.py clips/SEG-01.mp4 clips/SEG-02.mp4 ... --transition none -o output/final.mp4`
+  （先 `cd <项目根>/clips` 再传文件名最稳；join.py 会统一分辨率/帧率/音频并做校验。iSH 下不要用 concat.py 或 ffmpeg concat 解复用器——它不转换 list 内的路径）
