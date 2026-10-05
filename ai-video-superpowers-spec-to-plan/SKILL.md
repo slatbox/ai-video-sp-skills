@@ -1,7 +1,7 @@
 ---
 name: ai-video-superpowers-spec-to-plan
-version: 2.0.0
-description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成固定 15s 的 SEG 视频片段；为每段设计 P01–P12 动作分镜（专业镜头语言）；按故事板模板生成黏土预演分镜板参考图（智核 TT Image）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；最后产出 plan.md + plan.html（分镜板审核视图）交用户审核。Use when converting a video spec into an executable generation plan with storyboard previs.
+version: 2.1.0
+description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.1）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成固定 15s 的 SEG 视频片段；为每段设计 P01–P12 动作分镜（专业镜头语言）；按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；最后产出 plan.md + plan.html（分镜板审核视图）交用户审核。Use when converting a video spec into an executable generation plan with storyboard previs.
 ---
 
 # AI Video Superpowers · spec-to-plan
@@ -23,7 +23,7 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 - 每个 SC → `ceil(SC时长/15)` 个 SEG；**每段固定 15s**，动作调度把时长填满（12 格 × ~1.25s）。
 - 仅**最后一段**允许 4~14s 兜底；若剩余内容 <4s 不足以成段，并入上一段（该段仍 15s）。
 - 切点不切断进行中的动作/对话/运镜；场景大跳优先作切点；每段必须自洽完整。
-- 衔接判定（写进每段"衔接"字段）：`独立`（不同时空/无连续动作）/ `连贯（承接 SEG-xx）`（同一段连续剧情）。
+- 衔接判定（写进每段"衔接"字段；连贯段的分镜板要特别注意与上一张的视觉连续）：`独立`（不同时空/无连续动作）/ `连贯（承接 SEG-xx）`（同一段连续剧情）。
 
 ### 2) 动作分镜设计：P01–P12
 
@@ -35,21 +35,23 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 
 ### 3) 生成分镜板：`storyboards/SEG-xx.png`
 
-按 `references/storyboard-prompt-template.md` 组装提示词并提交 zhike-image：
+按 `references/storyboard-prompt-template.md` 组装提示词并提交 zhike-image。**必须按 SEG 顺序逐张生成**（生成 SEG-02 前要拿到 SEG-01 的成品图）：
 
 ```sh
 # 提交（挂本段全部人物参考图作外观唯一依据；横版板 16:9、2K、sunburst）
+# 第 2 张起，额外把上一张分镜板放最后一张 --image，作"连贯性依据"（仅参考角色造型/场景结构/板面风格/光照，不复制其内容与构图）
 python3 /var/minis/skills/zhike-image/scripts/image.py submit \
   --prompt "<组装好的分镜板模板全文>" --ar 16:9 --res 2K --version sunburst \
-  --image refs/char-a.png --image refs/char-b.png
+  --image refs/char-a.png --image refs/char-b.png --image storyboards/SEG-<上一段>.png
 # task_id 立即写入 storyboards/.taskids.json 防丢；轮询：
 python3 .../image.py poll --task-id <ID> --timeout 600
 # 下载（务必直接落 shared 项目目录）：
 python3 .../image.py download --url <result_url> --output storyboards/SEG-01.png
 ```
 
-- 多段可批量提交后统一轮询（batch 脚本也必须先把 task_id 落盘）。
-- 出图核对：12 格齐全、格内无文字箭头、人物比例与朝向全板一致；不合格重试 1 次（微调动作节点描述）。
+- **顺序生成不并行**：SEG-01 无上一张（不挂）；SEG-02 挂 SEG-01；SEG-03 挂 SEG-02……串行执行，确保链条连续。
+- **重生成的连锁规则**：用户要求改某张分镜板时，**该张及其后所有分镜板都要重生成**（否则后续板接过期版本，衔接再次断裂）。
+- 出图核对：12 格齐全、格内无文字箭头、人物比例与朝向全板一致、与上一张分镜板场景结构/人物造型/板面风格一致；不合格重试 1 次（微调动作节点描述）。
 - 仍失败 → 该段标记"分镜板待补"，继续流程（校验加 `--allow-no-storyboard`），plan.html 显示占位，请用户决定补生成还是跳过。
 
 ### 4) 视频提示词（分镜重现式）
