@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""校验 plan.md：SEG 块完整性、时长 4~15s、prompt 非空、衔接字段、分镜板、参考图存在、编号连续。
+"""校验 plan.md：SEG 块完整性、时长 4~15s（时长由内容量决定，非末段 <8s 警告）、prompt 非空、衔接字段、分镜板、参考图存在、编号连续。
 
-v2：支持分镜板（storyboards/SEG-xx.png）、参考图 @[tag]=path 格式、分镜概览字段。
+v3：时长不再强制固定 15s；分镜节点只要求存在 P 序列（格数由剧情决定）。
 
 用法: validate_plan.py <plan.md> [--project 项目根目录] [--allow-no-storyboard]
 退出码: 0=通过(可有警告)  1=有错误
@@ -79,8 +79,8 @@ def main():
                 d = int(m.group(1))
                 if not (4 <= d <= 15):
                     errors.append(f"{s['id']}: 时长 {d}s 超出模型范围 4~15s")
-                elif d != 15 and i < len(segs):
-                    errors.append(f"{s['id']}: 时长 {d}s 非 15s（v2 固定 15s 切分，仅末段可短）")
+                elif d < 8 and i < len(segs):
+                    warns.append(f"{s['id']}: 时长 {d}s 偏短（非末段建议 8~15s，确认内容量确实需要）")
 
         prompt = field(body, "prompt")
         if not prompt or prompt.strip() in ("", "|"):
@@ -114,7 +114,7 @@ def main():
 
         ov = field(body, "分镜概览")
         if not ov:
-            warns.append(f"{s['id']}: 缺少'分镜概览'字段（建议一行 12 节点速览）")
+            warns.append(f"{s['id']}: 缺少'分镜概览'字段（建议一行 N 节点速览）")
 
         link = field(body, "衔接")
         if i == 1:
