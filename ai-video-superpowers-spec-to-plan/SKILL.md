@@ -44,16 +44,16 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 按 `references/storyboard-prompt-template.md` 组装提示词并提交 zhike-image。**必须按 SEG 顺序逐张生成**（生成 SEG-02 前要拿到 SEG-01 的成品图）：
 
 ```sh
-# 提交（挂本段全部人物参考图作外观唯一依据；横版板 16:9、2K、sunburst）
+# 提交（挂本段全部相关参考图：人物 + 场景 + 物品，作外观唯一依据；横版板 16:9、2K、sunburst）
 # 第 2 张起，额外把上一张分镜板放最后一张 --image，作"连贯性依据"（仅参考角色造型/场景结构/板面风格/光照，不复制其内容与构图）
 python3 /var/minis/skills/zhike-image/scripts/image.py submit \
   --prompt "<组装好的分镜板模板全文>" --ar 16:9 --res 2K --version sunburst \
-  --image refs/char-a.png --image refs/char-b.png --image storyboards/SEG-<上一段>.png
-# task_id 立即写入 storyboards/.taskids.json 防丢；轮询：
-python3 .../image.py poll --task-id <ID> --timeout 600
-# 下载（务必直接落 shared 项目目录）：
-python3 .../image.py download --url <result_url> --output storyboards/SEG-01.png
+  --image refs/char-a.png --image refs/char-b.png \
+  --image refs/scene-1.png --image refs/prop-x.png \
+  --image storyboards/SEG-<上一段>.png
 ```
+
+- **参考图必须给全**：每段分镜板的 `--image` = 该段出场**全部人物**参考图 + 该段**全部场景**参考图 + 该段涉及的**关键物品**参考图（与 plan.md 该段"参考图"字段一一对应，去掉 @[storyboard] 本身），不能只挂人物——缺场景/物品参考会导致分镜板里场景结构和道具走样。
 
 - **顺序生成不并行**：SEG-01 无上一张（不挂）；SEG-02 挂 SEG-01；SEG-03 挂 SEG-02……串行执行，确保链条连续。
 - **重生成的连锁规则**：用户要求改某张分镜板时，**该张及其后所有分镜板都要重生成**（否则后续板接过期版本，衔接再次断裂）。
