@@ -1,7 +1,7 @@
 ---
 name: ai-video-superpowers-plan-to-video
-version: 1.1.0
-description: AI 视频生成+剪辑套件 ai-video-superpowers 第三阶段（执行）。当项目已有 plan.md，用户要求开始生成视频/按 plan 逐段生成/执行视频计划/生成视频片段并拼接成片时使用。按 plan 顺序调用海螺 H3 生成每段视频（断点续跑、每段完成在 plan 打钩），每段按 plan 的"参考图"字段挂分镜板+人物图+场景图（分镜板已链式连续，连贯片段无需再生成尾帧首帧图）；全部完成后用 ffmpeg-skill 的 join.py 拼接输出 output/final.mp4。Use when executing a video plan: generating clips with hailuo and stitching the final video with the ffmpeg skill.
+version: 1.2.0
+description: AI 视频生成+剪辑套件 ai-video-superpowers 第三阶段（执行）。当项目已有 plan.md，用户要求开始生成视频/按 plan 逐段生成/执行视频计划/生成视频片段并拼接成片时使用。开始前报计划（段数/消耗）并询问生成方式：一次性生成 or 一个一个生成；按 plan 顺序调用海螺 H3 生成每段视频（断点续跑、每段完成在 plan 打钩），每段按 plan 的"参考图"字段挂分镜板+人物图+场景图（分镜板已链式连续，连贯片段无需再生成尾帧首帧图）；全部完成后用 ffmpeg-skill 的 join.py 拼接输出 output/final.mp4。Use when executing a video plan: generating clips with hailuo and stitching the final video with the ffmpeg skill.
 ---
 
 # AI Video Superpowers · plan-to-video
@@ -12,7 +12,13 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第三阶段（�
 
 1. 找到项目与 `plan.md`（用户指定，或 `/var/minis/shared/ai-video/*/` 下唯一含 plan 的项目）。plan 若"待审核"，先请用户审核确认再消耗额度。
 2. 先跑 `validate_plan.py`（路径见 spec-to-plan 技能）确认格式可用。
-3. **断点续跑**：`### [x]` 的片段已有 `clips/` 成片则跳过；只处理 `### [ ]` 的片段。开始前向用户报计划：共 N 段、待生成 M 段、预计消耗（时长按秒计费），确认后开跑。
+3. **断点续跑**：`### [x]` 的片段已有 `clips/` 成片则跳过；只处理 `### [ ]` 的片段。开始前向用户报计划：共 N 段、待生成 M 段、预计消耗（时长按秒计费），并**询问生成方式**：
+   > 生成方式选哪种？
+   > 1. **一次性生成**——全部段并行/连续提交，一次性跑完（快，中途不用管）
+   > 2. **一个一个生成**——逐段提交、每段出片后给你过目再继续（稳，出问题早发现）
+   >
+   > 回复数字即可。
+   按用户选择执行：选 1 则连续提交全部段（轮询仍可分批做）；选 2 则严格逐段——每段出片、验收、向用户简报后，等用户点头（或无异议）再提交下一段。
 4. 调用细节先读 `/var/minis/skills/zhike-video/SKILL.md`（视频 key=`/var/minis/shared/zhike/.key`）与 `/var/minis/skills/zhike-image/SKILL.md`（图片 key=`.../image.key`）。HTTP 走两技能自带脚本（内部用 curl），不要用 Python urllib。
 
 ## 逐段生成（按 plan 顺序）
