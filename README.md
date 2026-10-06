@@ -12,6 +12,7 @@ Minis (OpenMinis) AI 视频生成 skill 套件，统一在此做版本管理。
 | ai-video-superpowers-brainstorm | 2.7.0 | 阶段一：访谈收集需求 → spec.md（人物参考图=无头三视图+正脸特写；时长按语速核算 + 子智能体双审） |
 | ai-video-superpowers-spec-to-plan | 2.7.0 | 阶段二：spec → plan.md（≤15s 按内容切分、分镜格数由剧情决定、链式分镜板、时长审核子智能体；v2.7 移除俯视调度图环节） |
 | ai-video-superpowers-plan-to-video | 1.1.0 | 阶段三：plan → 逐段出片 + ffmpeg-skill 拼接成片 |
+| ai-video-superpowers-quick | 1.0.0 | 快速通道：单段 ≤15s 快速出片（访谈+参考素材与 brainstorm 相同 → 直接出提示词 → 用户确认 → 直接生成，无 spec/plan/分镜板/审核） |
 | zhike-image | 1.0.0 | 智核 TT Image 2.5 图片生成（文生图/图生图/编辑） |
 | zhike-video | 1.0.0 | 智核海螺 H3 视频生成 |
 
@@ -24,6 +25,8 @@ spec-to-plan → plan.md   （执行层：SEG 切分(≤15s 按内容) + P01–P
                 └ 时长审核：子智能体核台词秒数/分镜密度，循环审到通过
 plan-to-video → clips/SEG-xx.mp4 + output/final.mp4
 ```
+
+**快速通道**：`quick` = 单段 ≤15s 一步出片（brainstorm 式访谈 + 参考素材收集 → 直接组装视频提示词发用户确认 → 海螺 H3 生成 → 交付 quick.mp4，无 spec/plan/分镜板/审核）。需求超过一个片段/15s 时仍走完整流水线。
 
 关键约定：
 - 分镜板按 SEG 顺序**链式**生成（第 2 张起把上一张作连贯性参考图），改某张则其后全部重生成。
