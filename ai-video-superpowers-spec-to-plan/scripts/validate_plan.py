@@ -112,6 +112,19 @@ def main():
                     else:
                         errors.append(f"{s['id']}: 分镜板文件不存在: {mm.group(1)}（生成后重跑，或加 --allow-no-storyboard）")
 
+        bl = field(body, "调度图")
+        if not bl:
+            warns.append(f"{s['id']}: 缺少'调度图'字段（建议 storyboards/SEG-xx-blocking.png）")
+        else:
+            mb = re.search(r"(storyboards/[\w.\-]+\.(?:png|jpg|jpeg|webp))", bl)
+            if mb:
+                pb = os.path.join(project, mb.group(1))
+                if not os.path.isfile(pb):
+                    if args.allow_no_storyboard:
+                        warns.append(f"{s['id']}: 调度图待补: {mb.group(1)}")
+                    else:
+                        errors.append(f"{s['id']}: 调度图文件不存在: {mb.group(1)}（生成后重跑，或加 --allow-no-storyboard）")
+
         ov = field(body, "分镜概览")
         if not ov:
             warns.append(f"{s['id']}: 缺少'分镜概览'字段（建议一行 N 节点速览）")

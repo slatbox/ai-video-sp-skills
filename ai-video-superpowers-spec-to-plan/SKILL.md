@@ -1,7 +1,7 @@
 ---
 name: ai-video-superpowers-spec-to-plan
-version: 2.3.0
-description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.3）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成 SEG 视频片段（每段 ≤15s，时长由内容量决定，不为凑满而稀释或堆砌）；为每段设计动作分镜（数量由剧情决定，一般 4~10 格，**不强行填满 12 格**，用不到的格留空白）；按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；plan 落盘后**必须派子智能体审核时长设计**（台词能否说完、分镜密度是否合理），不通过则修改重审直到通过；最后产出 plan.md + plan.html 交用户审核（成片拼接走 ffmpeg-skill 的 join.py）。Use when converting a video spec into an executable generation plan with storyboard previs.
+version: 2.4.0
+description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.4）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成 SEG 视频片段（每段 ≤15s，时长由内容量决定，不为凑满而稀释或堆砌）；为每段设计动作分镜（数量由剧情决定，一般 4~10 格，**不强行填满 12 格**，用不到的格留空白）；每段先生成**俯视场景调度图**（站位+运动轨迹，storyboards/SEG-xx-blocking.png），再按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，调度图作为分镜板的空间调度参考挂入；第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；plan 落盘后**必须派子智能体审核时长设计**（台词能否说完、分镜密度是否合理），不通过则修改重审直到通过；最后产出 plan.md + plan.html 交用户审核（成片拼接走 ffmpeg-skill 的 join.py）。Use when converting a video spec into an executable generation plan with storyboard previs.
 ---
 
 # AI Video Superpowers · spec-to-plan
@@ -15,7 +15,7 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 3. 已有 `plan.md` → 问清重新生成还是迭代（迭代保留已完成 `[x]` 片段）。
 4. 新建 `<项目>/storyboards/` 目录（存分镜板）；确认 zhike-image 的 image.key 存在。
 
-## 六步流程
+## 七步流程
 
 ### 1) 切分：≤15s，时长由内容量决定
 
@@ -39,28 +39,39 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 - 内容取自 spec 剧情与台词，调度成 N 个定格瞬间：动作弧线递进（蓄力→发力→接触→结果→余韵）、每格每角色仅一种姿态、标明接触点/方向/结果、轴线连续、相邻格机位有变化。
 - 台词安排进对应格（谁在说、谁在听、什么姿态）；台词格之间留足说话时间（一格别塞两句长台词）。
 
-### 3) 生成分镜板：`storyboards/SEG-xx.png`
+### 3) 生成俯视场景调度图：`storyboards/SEG-xx-blocking.png`
+
+生成分镜板之前，每段先出一张**俯视场景调度图**（顶视图，标出所有人物站位与带箭头运动轨迹），作为分镜板的空间调度依据：
+
+- 按 `references/blocking-prompt-template.md` 组装提示词，站位与轨迹从本段动作分镜 P 节点倒推（P01 位置=初始站位，节点间位移=轨迹）。
+- 挂图：该段全部人物 + 全部场景 + 影响站位/通行的关键物品参考图；同场景连贯段把上一段调度图放最后（仅作平面布局连贯依据）。
+- 参数与分镜板一致（sunburst/2K），画幅随项目（横 16:9 / 竖 9:16）；按 SEG 顺序逐张生成，task_id 落 `storyboards/.taskids.json`。
+- 调度图**只给分镜板用，不传给视频生成模型**（plan.md 写进"调度图"字段，不进"参考图"字段）。
+- 出图核对：场景平面结构与场景参考图一致、人物齐全且服装主色可区分、轨迹方向与 P 节点动作方向一致、图内无多余文字；不合格重试 1 次，仍失败标记"调度图待补"，分镜板降级为仅挂人物/场景/物品参考并记入 plan 备注。
+
+### 4) 生成分镜板：`storyboards/SEG-xx.png`
 
 按 `references/storyboard-prompt-template.md` 组装提示词并提交 zhike-image。**必须按 SEG 顺序逐张生成**（生成 SEG-02 前要拿到 SEG-01 的成品图）：
 
 ```sh
-# 提交（挂本段全部相关参考图：人物 + 场景 + 物品，作外观唯一依据；横版板 16:9、2K、sunburst）
+# 提交（挂本段全部相关参考图：人物 + 场景 + 物品 + 本段俯视调度图，作外观与调度唯一依据；横版板 16:9、2K、sunburst）
 # 第 2 张起，额外把上一张分镜板放最后一张 --image，作"连贯性依据"（仅参考角色造型/场景结构/板面风格/光照，不复制其内容与构图）
 python3 /var/minis/skills/zhike-image/scripts/image.py submit \
   --prompt "<组装好的分镜板模板全文>" --ar 16:9 --res 2K --version sunburst \
   --image refs/char-a.png --image refs/char-b.png \
   --image refs/scene-1.png --image refs/prop-x.png \
+  --image storyboards/SEG-xx-blocking.png \
   --image storyboards/SEG-<上一段>.png
 ```
 
-- **参考图必须给全**：每段分镜板的 `--image` = 该段出场**全部人物**参考图 + 该段**全部场景**参考图 + 该段涉及的**关键物品**参考图（与 plan.md 该段"参考图"字段一一对应，去掉 @[storyboard] 本身），不能只挂人物——缺场景/物品参考会导致分镜板里场景结构和道具走样。
+- **参考图必须给全**：每段分镜板的 `--image` = 该段出场**全部人物**参考图 + 该段**全部场景**参考图 + 该段涉及的**关键物品**参考图 + **本段俯视调度图**（第 3 步产出，全板站位/朝向/运动方向唯一依据；与 plan.md 该段"参考图"字段一一对应，去掉 @[storyboard] 本身），不能只挂人物——缺场景/物品参考会导致分镜板里场景结构和道具走样，缺调度图会导致各格人物位置/朝向随机漂移。
 
 - **顺序生成不并行**：SEG-01 无上一张（不挂）；SEG-02 挂 SEG-01；SEG-03 挂 SEG-02……串行执行，确保链条连续。
 - **重生成的连锁规则**：用户要求改某张分镜板时，**该张及其后所有分镜板都要重生成**（否则后续板接过期版本，衔接再次断裂）。
 - 出图核对：**已用格**（P01–Pxx）齐全、未用格为干净空白、格内无文字箭头、人物比例与朝向全板一致、与上一张分镜板场景结构/人物造型/板面风格/光照一致；不合格重试 1 次（微调动作节点描述）。
 - 仍失败 → 该段标记"分镜板待补"，继续流程（校验加 `--allow-no-storyboard`），plan.html 显示占位，请用户决定补生成还是跳过。
 
-### 4) 视频提示词（分镜重现式）
+### 5) 视频提示词（分镜重现式）
 
 按 `references/video-prompt-template.md` 全文填写，核心结构：
 
@@ -72,7 +83,7 @@ python3 /var/minis/skills/zhike-image/scripts/image.py submit \
 
 prompt 内保留 `@[storyboard]`、`@[C1]` 等占位标记；实际文件映射写进该段"参考图"字段：`@[storyboard]=storyboards/SEG-01.png, @[C1 陈岩]=refs/char-chenyan.png, refs/scene-1.png`（@ 标记项仅定义外观；场景图直接写路径）。
 
-### 5) 写 plan.md → 时长审核（子智能体，必须通过）→ 校验 → plan.html → 用户审核
+### 6) 写 plan.md → 时长审核（子智能体，必须通过）→ 校验 → plan.html → 用户审核
 
 1. 读 `references/plan-template.md` 写 `<项目>/plan.md`，严格保持 `### [ ] SEG-xx` 字段格式（执行阶段依赖打钩结构）。
 2. **时长设计审核（子智能体，循环直到通过）**：

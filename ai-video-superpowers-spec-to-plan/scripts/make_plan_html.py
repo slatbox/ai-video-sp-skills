@@ -98,6 +98,21 @@ def build_seg_cards():
             else:
                 sb_html = '<div class="sbw miss">分镜板待补：%s</div>' % sb.group(0)
 
+        bl = re.search(r'storyboards/[\w.\-]+\.(?:png|jpe?g|webp)', meta('调度图') or '')
+        bl_html = ''
+        if bl and 'blocking' in bl.group(0):
+            bfp = os.path.join(proj, bl.group(0))
+            bbase = os.path.splitext(os.path.basename(bl.group(0)))[0]
+            bth = 'storyboards/thumbs/%s.jpg' % bbase
+            if not os.path.exists(os.path.join(proj, bth)):
+                bth = bl.group(0)
+            if os.path.exists(bfp):
+                bl_html = ('<div class="sbw"><img class="sb" loading="lazy" src="%s" data-full="%s" '
+                           'onclick="lb(this)" alt="调度图 %s"><div class="sbc">俯视调度图 %s · 点击放大</div></div>'
+                           % (MIN + bth, MIN + bl.group(0), segid, segid))
+            else:
+                bl_html = '<div class="sbw miss">调度图待补：%s</div>' % bl.group(0)
+
         md = markdown.Markdown(extensions=['tables'])
         fields_html = inject_thumbs(md.convert(block_noprompt))
 
@@ -105,13 +120,13 @@ def build_seg_cards():
         cards.append(
             '<div class="seg" id="%s">'
             '<div class="seg-h"><span class="tick">%s</span><span class="sid">%s</span>%s</div>'
-            '%s%s'
+            '%s%s%s'
             '<div class="pwrap"><button class="pbtn" onclick="tg(this)">▸ 展开 prompt</button>'
             '<pre class="prompt" id="%s">%s</pre>'
             '<button class="cbtn" onclick="cp(\'%s\')">复制 prompt</button></div>'
             '</div>'
             % (pid, '☑' if checked else '☐', segid,
-               H.escape(meta('衔接') or ''), sb_html, fields_html, pid, H.escape(prompt), pid))
+               H.escape(meta('衔接') or ''), sb_html, bl_html, fields_html, pid, H.escape(prompt), pid))
     return '\n'.join(cards)
 
 
