@@ -98,21 +98,6 @@ def build_seg_cards():
             else:
                 sb_html = '<div class="sbw miss">分镜板待补：%s</div>' % sb.group(0)
 
-        bl = re.search(r'storyboards/[\w.\-]+\.(?:png|jpe?g|webp)', meta('调度图') or '')
-        bl_html = ''
-        if bl and 'blocking' in bl.group(0):
-            bfp = os.path.join(proj, bl.group(0))
-            bbase = os.path.splitext(os.path.basename(bl.group(0)))[0]
-            bth = 'storyboards/thumbs/%s.jpg' % bbase
-            if not os.path.exists(os.path.join(proj, bth)):
-                bth = bl.group(0)
-            if os.path.exists(bfp):
-                bl_html = ('<div class="sbw"><img class="sb" loading="lazy" src="%s" data-full="%s" '
-                           'onclick="lb(this)" alt="调度图 %s"><div class="sbc">俯视调度图 %s · 点击放大</div></div>'
-                           % (MIN + bth, MIN + bl.group(0), segid, segid))
-            else:
-                bl_html = '<div class="sbw miss">调度图待补：%s</div>' % bl.group(0)
-
         md = markdown.Markdown(extensions=['tables'])
         fields_html = inject_thumbs(md.convert(block_noprompt))
 
