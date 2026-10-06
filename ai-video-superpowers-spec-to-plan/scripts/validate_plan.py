@@ -96,6 +96,9 @@ def main():
                 errors.append(f"{s['id']}: prompt 缺少分镜节点 P01–Pxx")
             if "视觉风格" not in prompt:
                 warns.append(f"{s['id']}: prompt 缺少'视觉风格'等模板区块，检查是否套用 video-prompt-template")
+            # 台词标签检查：有中文引号台词但整段无 <d> 标签 → 警告
+            if "<d>" not in prompt and re.search(r"[「“][^「」“”]{2,}[」”]", prompt):
+                warns.append(f"{s['id']}: prompt 有引号台词但无 <d>[Chinese]…</d> 台词标签（影响发音稳定性，按 templates/video.txt 台词标注规则补）")
 
         sb = field(body, "分镜板")
         if not sb:

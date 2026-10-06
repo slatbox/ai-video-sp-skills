@@ -1,12 +1,19 @@
 ---
 name: ai-video-superpowers-spec-to-plan
-version: 2.4.0
-description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.4）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成 SEG 视频片段（每段 ≤15s，时长由内容量决定，不为凑满而稀释或堆砌）；为每段设计动作分镜（数量由剧情决定，一般 4~10 格，**不强行填满 12 格**，用不到的格留空白）；每段先生成**俯视场景调度图**（站位+运动轨迹，storyboards/SEG-xx-blocking.png），再按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，调度图作为分镜板的空间调度参考挂入；第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图；plan 落盘后**必须派子智能体审核时长设计**（台词能否说完、分镜密度是否合理），不通过则修改重审直到通过；最后产出 plan.md + plan.html 交用户审核（成片拼接走 ffmpeg-skill 的 join.py）。Use when converting a video spec into an executable generation plan with storyboard previs.
+version: 2.5.0
+description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2.5）。当项目里已有 spec.md（场景片段级脚本，见 brainstorm v2+），用户要求生成执行方案/plan/分段计划/切分片段/写生视频提示词/动作分镜/分镜板/storyboard/预演图时使用。把 spec 的场景片段（SC）切分成 SEG 视频片段（每段 ≤15s，时长由内容量决定，不为凑满而稀释或堆砌）；为每段设计动作分镜（数量由剧情决定，一般 4~10 格，**不强行填满 12 格**，用不到的格留空白）；每段先生成**俯视场景调度图**（站位+运动轨迹，storyboards/SEG-xx-blocking.png），再按故事板模板**顺序**生成黏土预演分镜板参考图（智核 TT Image，调度图作为分镜板的空间调度参考挂入；第 2 张起把上一张分镜板作为连贯性参考图传入，保证前后板接得上）；按分镜重现式模板写出每段视频 prompt 并绑定 @[storyboard]/@[C] 参考图，**发声台词一律用 <d>[Chinese]台词</d> 标签包裹提升发音稳定性**；所有提示词模板与审核任务书统一放 references/templates/*.txt 独立管理（SKILL.md 只留规则与指针）；plan 落盘后**必须派子智能体审核时长设计**（台词能否说完、分镜密度、台词标签），不通过则修改重审直到通过；最后产出 plan.md + plan.html 交用户审核（成片拼接走 ffmpeg-skill 的 join.py）。Use when converting a video spec into an executable generation plan with storyboard previs.
 ---
 
 # AI Video Superpowers · spec-to-plan
 
 套件第二阶段：读 `spec.md` → 产出 `plan.md` + `plan.html`。**不调用视频生成 API**，但**会调用图片生成 API**（分镜板，走 zhike-image 技能，key=`/var/minis/shared/zhike/image.key`）。项目目录约定见 brainstorm/SKILL.md（共用）。
+
+**提示词模板文件（组装时读取、替换方括号，SKILL.md 只留规则要点与指针）**：
+- `references/templates/storyboard.txt` — 分镜板模板全文（防抽卡规则句照抄不删）
+- `references/templates/blocking.txt` — 俯视调度图模板全文
+- `references/templates/video.txt` — 视频 prompt 模板全文（含【台词标注规则】段）
+- `references/templates/audit-spec.txt` / `audit-plan.txt` — 两阶段审核任务书全文
+- 填写规则与速查表在同名 `references/*-template.md` / `audit-prompt.md`（规则与模板分离管理）
 
 ## 前置
 
@@ -43,7 +50,7 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 
 生成分镜板之前，每段先出一张**俯视场景调度图**（顶视图，标出所有人物站位与带箭头运动轨迹），作为分镜板的空间调度依据：
 
-- 按 `references/blocking-prompt-template.md` 组装提示词，站位与轨迹从本段动作分镜 P 节点倒推（P01 位置=初始站位，节点间位移=轨迹）。
+- 读 `references/templates/blocking.txt` 组装提示词（填写规则见 `references/blocking-prompt-template.md`），站位与轨迹从本段动作分镜 P 节点倒推（P01 位置=初始站位，节点间位移=轨迹）。
 - 挂图：该段全部人物 + 全部场景 + 影响站位/通行的关键物品参考图；同场景连贯段把上一段调度图放最后（仅作平面布局连贯依据）。
 - 参数与分镜板一致（sunburst/2K），画幅随项目（横 16:9 / 竖 9:16）；按 SEG 顺序逐张生成，task_id 落 `storyboards/.taskids.json`。
 - 调度图**只给分镜板用，不传给视频生成模型**（plan.md 写进"调度图"字段，不进"参考图"字段）。
@@ -51,7 +58,7 @@ description: AI 视频生成+剪辑套件 ai-video-superpowers 第二阶段（v2
 
 ### 4) 生成分镜板：`storyboards/SEG-xx.png`
 
-按 `references/storyboard-prompt-template.md` 组装提示词并提交 zhike-image。**必须按 SEG 顺序逐张生成**（生成 SEG-02 前要拿到 SEG-01 的成品图）：
+读 `references/templates/storyboard.txt` 组装提示词并提交 zhike-image（填写规则与镜头标签速查见 `references/storyboard-prompt-template.md`）。**必须按 SEG 顺序逐张生成**（生成 SEG-02 前要拿到 SEG-01 的成品图）：
 
 ```sh
 # 提交（挂本段全部相关参考图：人物 + 场景 + 物品 + 本段俯视调度图，作外观与调度唯一依据；横版板 16:9、2K、sunburst）
@@ -73,12 +80,13 @@ python3 /var/minis/skills/zhike-image/scripts/image.py submit \
 
 ### 5) 视频提示词（分镜重现式）
 
-按 `references/video-prompt-template.md` 全文填写，核心结构：
+读 `references/templates/video.txt` 全文填写（填写规则见 `references/video-prompt-template.md`），核心结构：
 
 - 首段：`@[storyboard] 是本视频的分镜蓝图——请逐镜头进行重现……`（防抽卡规则句照抄不删）
 - `@[C]` 人物外观映射句（本段每个出场角色一句）
 - 区块：视觉风格/动作语言/视觉特效/摄影风格/音频/环境/情感基调/节奏与递进（取自 spec 第 2 节两栏与氛围设计）
 - 分镜节点 P01–Pxx 逐条写全（**只写到本段实际分镜数 Pxx，不写空格子**；机位、景别、人物位置、核心动作、画面细节），与分镜板**已用格**逐格一致；台词写进对应格
+- **台词标签（核心规则，提升台词发音稳定性）**：所有发声台词（对白+旁白）用 `<d>[Chinese]台词原文</d>` 包裹——一句一个标签、按句拆分、标签内只放台词原文（不加说话人名/动作描述）；不发声的内心独白不用标签。模板尾部的【台词标注规则】段随全文照抄。
 - 连贯片段在"环境"区块加承接句（说明与上一段同一场景/同一人物/同一光照、紧接上一画面；**连贯性只靠 prompt 承接句 + 链式分镜板保证，不再生成尾帧首帧图**）
 
 prompt 内保留 `@[storyboard]`、`@[C1]` 等占位标记；实际文件映射写进该段"参考图"字段：`@[storyboard]=storyboards/SEG-01.png, @[C1 陈岩]=refs/char-chenyan.png, refs/scene-1.png`（@ 标记项仅定义外观；场景图直接写路径）。
@@ -87,8 +95,8 @@ prompt 内保留 `@[storyboard]`、`@[C1]` 等占位标记；实际文件映射�
 
 1. 读 `references/plan-template.md` 写 `<项目>/plan.md`，严格保持 `### [ ] SEG-xx` 字段格式（执行阶段依赖打钩结构）。
 2. **时长设计审核（子智能体，循环直到通过）**：
-   - 派 subagent_task（General Sub Agent）审核 `<project>/spec.md` + `<project>/plan.md`，任务书见 `references/audit-prompt.md`。
-   - 审核点：① 每段台词逐句秒数核算——按段时长能否自然说完（对白 3~3.5 字/秒、旁白 3.5~4 字/秒，含停顿），塞不下的判不合格；② 分镜密度——每格 1.5~3s，一格塞多个不兼容动作/两句长台词=太密；单段仅 1~2 格且无节奏停顿=太稀；③ 段间节奏——连续多段全部顶满 15s 且内容空洞=稀释，短段堆叠碎切=零碎；④ 与 spec 剧情/台词一致性。
+   - 派 subagent_task（General Sub Agent）审核 `<project>/spec.md` + `<project>/plan.md`，任务书全文见 `references/templates/audit-plan.txt`（替换方括号；核算基准与循环规则见 `references/audit-prompt.md`）。
+   - 审核点：① 每段台词逐句秒数核算——按段时长能否自然说完（对白 3~3.5 字/秒、旁白 3.5~4 字/秒，含停顿），塞不下的判不合格；② 分镜密度——每格 1.5~3s，一格塞多个不兼容动作/两句长台词=太密；单段仅 1~2 格且无节奏停顿=太稀；③ 段间节奏——连续多段全部顶满 15s 且内容空洞=稀释，短段堆叠碎切=零碎；④ 与 spec 剧情/台词一致性；⑤ 台词标签——发声台词是否都用 `<d>[Chinese]…</d>` 包裹。
    - 返回 `通过` 或问题清单（SEG 编号 + 问题 + 修改建议）。**不通过 → 按清单修改 plan.md（必要时重新设计切分/分镜），再次派审核，循环直到通过**（上限 3 轮，仍不过则把分歧点列给用户裁决）。
    - 通过后把审核结论（轮次 + 结论）写进 plan.md 末尾"审核记录"。
 3. 校验（需全绿）：

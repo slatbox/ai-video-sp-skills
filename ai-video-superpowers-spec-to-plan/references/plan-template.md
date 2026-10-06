@@ -19,7 +19,7 @@
 - 分镜概览: P01 大远景… → Pxx …（一行 N 节点速览，供快速审核）
 - prompt: |
   @[storyboard] 是本视频的分镜蓝图——请逐镜头进行重现。……
-  （references/video-prompt-template.md 模板全文填好，分镜节点 P01–P12 逐条写全）
+  （references/templates/video.txt 模板全文填好，分镜节点 P01–Pxx 逐条写全；发声台词用 <d>[Chinese]台词原文</d> 包裹）
 - 参考图: @[storyboard]=storyboards/SEG-01.png, @[C1 角色名]=refs/char-a.png, @[C2 角色名]=refs/char-b.png（场景图直接写路径 refs/scene-1.png，不带 @ 标记）
 - 成片: clips/SEG-01.mp4
 - 备注: 台词/特殊要求（可选）
@@ -42,8 +42,9 @@
 
 ## 审核记录
 
-- 时长审核（子智能体）：第 x 轮通过 ｜ 结论摘要（台词可说完 / 密度合理）
+- 时长审核（子智能体）：第 x 轮通过 ｜ 结论摘要（台词可说完 / 密度合理 / 台词标签齐全）
 - 分镜格数：各段 P01–Pxx，格数由剧情决定，板面剩余格留空白
+- 台词标签：所有发声台词均按 `<d>[Chinese]台词原文</d>` 包裹（scripts/validate_plan.py 检查）
 
 ## 成片
 

@@ -10,7 +10,7 @@ Minis (OpenMinis) AI 视频生成 skill 套件，统一在此做版本管理。
 | skill | 版本 | 说明 |
 |---|---|---|
 | ai-video-superpowers-brainstorm | 2.7.0 | 阶段一：访谈收集需求 → spec.md（人物参考图=无头三视图+正脸特写；时长按语速核算 + 子智能体双审） |
-| ai-video-superpowers-spec-to-plan | 2.4.0 | 阶段二：spec → plan.md（≤15s 按内容切分、分镜格数由剧情决定、俯视调度图+链式分镜板、时长审核子智能体） |
+| ai-video-superpowers-spec-to-plan | 2.5.0 | 阶段二：spec → plan.md（≤15s 按内容切分、分镜格数由剧情决定、俯视调度图+链式分镜板、时长审核子智能体） |
 | ai-video-superpowers-plan-to-video | 1.1.0 | 阶段三：plan → 逐段出片 + ffmpeg-skill 拼接成片 |
 | zhike-image | 1.0.0 | 智核 TT Image 2.5 图片生成（文生图/图生图/编辑） |
 | zhike-video | 1.0.0 | 智核海螺 H3 视频生成 |
